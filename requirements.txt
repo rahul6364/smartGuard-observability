@@ -1,0 +1,7 @@
+google-cloud-logging
+google-generativeai
+requests
+dotenv
+sqlalchemy 
+psycopg2-binary
+fastapi
