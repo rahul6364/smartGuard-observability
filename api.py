@@ -65,24 +65,42 @@ def get_logs(
     return {"logs": [dict(r) for r in rows]}
 
 # 🟢 Fetch alerts (critical logs)
+# @app.get("/alerts")
+# def get_alerts(limit: int = Query(10)):
+#     conn = get_db_connection()
+#     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+#     cur.execute(
+#         """
+#         SELECT * FROM logs
+#         WHERE ai_summary ILIKE '%error%' OR ai_summary ILIKE '%suspicious%'
+#         ORDER BY timestamp DESC
+#         LIMIT %s
+#         """,
+#         (limit,)
+#     )
+#     rows = cur.fetchall()
+#     cur.close()
+#     conn.close()
+
+#     return {"alerts": [dict(r) for r in rows]}
 @app.get("/alerts")
 def get_alerts(limit: int = Query(10)):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cur.execute(
-        """
+        f"""
         SELECT * FROM logs
-        WHERE ai_summary ILIKE '%error%' OR ai_summary ILIKE '%suspicious%'
+        WHERE ai_summary ILIKE '%%error%%' OR ai_summary ILIKE '%%suspicious%%'
         ORDER BY timestamp DESC
-        LIMIT %s
-        """,
-        (limit,)
+        LIMIT {limit}
+        """
     )
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
     return {"alerts": [dict(r) for r in rows]}
+
 
 # 🟢 Metrics (count by severity)
 @app.get("/metrics")
