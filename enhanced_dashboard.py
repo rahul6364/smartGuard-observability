@@ -881,30 +881,37 @@ def show_enhanced_metrics():
         hourly_metrics = metrics_data.get("hourly_metrics", [])
         if hourly_metrics:
             hourly_df = pd.DataFrame(hourly_metrics)
-            hourly_df['hour'] = pd.to_datetime(hourly_df['hour'])
-            
-            # Pivot for better visualization
-            pivot_df = hourly_df.pivot(index='hour', columns='severity', values='count').fillna(0)
-            
-            fig = px.bar(
-                pivot_df.reset_index(),
-                x='hour',
-                y=pivot_df.columns,
-                title="Logs by Severity Over Time",
-                color_discrete_map={
-                    'ERROR': 'red',
-                    'WARNING': 'orange',
-                    'INFO': 'blue'
-                }
-            )
-            
-            fig.update_layout(
-                xaxis_title="Time",
-                yaxis_title="Log Count",
-                height=400
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
+            if not hourly_df.empty and 'hour' in hourly_df.columns and 'severity' in hourly_df.columns:
+                hourly_df['hour'] = pd.to_datetime(hourly_df['hour'])
+                
+                # Pivot for better visualization
+                try:
+                    pivot_df = hourly_df.pivot(index='hour', columns='severity', values='count').fillna(0)
+                    
+                    fig = px.bar(
+                        pivot_df.reset_index(),
+                        x='hour',
+                        y=pivot_df.columns,
+                        title="Logs by Severity Over Time",
+                        color_discrete_map={
+                            'ERROR': 'red',
+                            'WARNING': 'orange',
+                            'INFO': 'blue'
+                        }
+                    )
+                    
+                    fig.update_layout(
+                        xaxis_title="Time",
+                        yaxis_title="Log Count",
+                        height=400
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                except Exception as e:
+                    st.warning(f"Could not create hourly metrics chart: {e}")
+                    st.dataframe(hourly_df)
+            else:
+                st.warning("No hourly metrics data available")
         
         # Service-specific metrics
         st.subheader("🏥 Service-Specific Metrics")
@@ -913,24 +920,30 @@ def show_enhanced_metrics():
         if service_metrics:
             service_df = pd.DataFrame(service_metrics)
             
-            # Create service metrics heatmap
-            pivot_service = service_df.pivot(index='service', columns='severity', values='count').fillna(0)
-            
-            fig = px.imshow(
-                pivot_service.values,
-                x=pivot_service.columns,
-                y=pivot_service.index,
-                title="Service Health Heatmap",
-                color_continuous_scale='RdYlGn_r',
-                aspect="auto"
-            )
-            
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Service metrics table
-            st.subheader("📋 Detailed Service Metrics")
-            st.dataframe(service_df, use_container_width=True)
+            if not service_df.empty and 'service' in service_df.columns and 'severity' in service_df.columns:
+                # Create service metrics heatmap
+                try:
+                    pivot_service = service_df.pivot(index='service', columns='severity', values='count').fillna(0)
+                    
+                    fig = px.imshow(
+                        pivot_service.values,
+                        x=pivot_service.columns,
+                        y=pivot_service.index,
+                        title="Service Health Heatmap",
+                        color_continuous_scale='RdYlGn_r',
+                        aspect="auto"
+                    )
+                    
+                    fig.update_layout(height=400)
+                    st.plotly_chart(fig, use_container_width=True)
+                except Exception as e:
+                    st.warning(f"Could not create service heatmap: {e}")
+                
+                # Service metrics table
+                st.subheader("📋 Detailed Service Metrics")
+                st.dataframe(service_df, use_container_width=True)
+            else:
+                st.warning("No service metrics data available")
         
         # System health score
         st.subheader("💯 System Health Score")

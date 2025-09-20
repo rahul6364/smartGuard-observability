@@ -39,9 +39,9 @@ def start_api():
     """Start the FastAPI backend"""
     print("🚀 Starting FastAPI backend...")
     try:
-        # Try demo API first (no database required)
+        # Start the main API (now works with sample data)
         api_process = subprocess.Popen([
-            sys.executable, "api_demo.py"
+            sys.executable, "api.py"
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Wait a moment for API to start
@@ -50,9 +50,9 @@ def start_api():
         # Check if API is running
         try:
             import requests
-            response = requests.get("http://localhost:8000/", timeout=5)
+            response = requests.get("http://localhost:8000/metrics", timeout=5)
             if response.status_code == 200:
-                print("✅ FastAPI demo backend is running on http://localhost:8000")
+                print("✅ FastAPI backend is running on http://localhost:8000")
                 print("📊 Using sample data - no database required")
                 return api_process
             else:
