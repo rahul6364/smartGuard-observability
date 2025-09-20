@@ -5,3 +5,13 @@ dotenv
 sqlalchemy 
 psycopg2-binary
 fastapi
+streamlit
+plotly
+pandas
+networkx
+scikit-learn
+numpy
+python-dateutil
+streamlit-chat
+streamlit-option-menu
+streamlit-aggrid
