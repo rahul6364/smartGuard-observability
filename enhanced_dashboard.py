@@ -138,7 +138,7 @@ def main():
             menu_icon="cast",
             default_index=0,
             styles={
-                "container": {"padding": "0!important", "background-color": "#fafafa"},
+                "container": {"padding": "0!important", "background-color": "#0b0b0b"},
                 "icon": {"color": "#667eea", "font-size": "18px"},
                 "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
                 "nav-link-selected": {"background-color": "#667eea"},
@@ -696,7 +696,7 @@ def show_service_health():
         fig = go.Figure(data=[edge_trace, node_trace],
                        layout=go.Layout(
                            title='Microservice Health Network',
-                           titlefont_size=16,
+                           font=dict(size=16),
                            showlegend=False,
                            hovermode='closest',
                            margin=dict(b=20,l=5,r=5,t=40),
