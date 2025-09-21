@@ -45,21 +45,24 @@ def start_api():
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Wait a moment for API to start
-        time.sleep(3)
+        time.sleep(5)
         
         # Check if API is running
         try:
             import requests
-            response = requests.get("http://localhost:8000/metrics", timeout=5)
+            response = requests.get("http://localhost:8000/metrics", timeout=10)
             if response.status_code == 200:
                 print("✅ FastAPI backend is running on http://localhost:8000")
-                print("📊 Using sample data - no database required")
+                print("📊 Using enhanced sample data with SmartGuard integration")
                 return api_process
             else:
-                print("❌ FastAPI backend failed to start properly")
+                print(f"❌ FastAPI backend returned status {response.status_code}")
                 return None
-        except:
-            print("❌ FastAPI backend failed to start properly")
+        except requests.exceptions.ConnectionError:
+            print("❌ FastAPI backend failed to start - connection refused")
+            return None
+        except Exception as e:
+            print(f"❌ FastAPI backend check failed: {e}")
             return None
             
     except Exception as e:

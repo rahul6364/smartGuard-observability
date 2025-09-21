@@ -5,7 +5,11 @@ import json
 import google.generativeai as genai
 from datetime import datetime, timedelta
 import random
+from gemini_client import GeminiClient
+from smartguard_integration import smartguard_integration
 from dotenv import load_dotenv
+from functools import lru_cache
+
 
 # Load environment
 load_dotenv()
@@ -18,16 +22,18 @@ DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Initialize Gemini
+# Initialize Gemini Client
 try:
     if GEMINI_API_KEY and GEMINI_API_KEY != "your_gemini_api_key_here":
-        genai.configure(api_key=GEMINI_API_KEY)
+        gemini = GeminiClient()
         AI_AVAILABLE = True
         print("✅ Gemini AI configured")
     else:
+        gemini = None
         AI_AVAILABLE = False
         print("⚠️ Gemini API key not configured. AI features will be limited.")
 except Exception as e:
+    gemini = None
     AI_AVAILABLE = False
     print(f"⚠️ Gemini AI not available: {e}")
 
@@ -70,8 +76,10 @@ def generate_sample_logs(count=100):
     
     return logs
 
-# Generate sample data
+# Generate simple sample data for faster performance
+print("📊 Generating sample data...")
 SAMPLE_LOGS = generate_sample_logs(100)
+print(f"✅ Generated {len(SAMPLE_LOGS)} sample logs")
 
 def get_sample_logs(service=None, severity=None, limit=20):
     """Get sample logs with optional filtering"""
@@ -100,21 +108,59 @@ app.add_middleware(
 def get_logs(
     service: str = Query(None),
     severity: str = Query(None),
-    limit: int = Query(20)
+    limit: int = Query(20),
+    use_real_logs: bool = Query(False)
 ):
+    if use_real_logs and smartguard_integration.available:
+        # Try to get real logs from SmartGuard
+        real_logs = smartguard_integration.get_real_logs()
+        if real_logs:
+            # Filter real logs
+            filtered_logs = real_logs
+            if service:
+                filtered_logs = [log for log in filtered_logs if log.get("service") == service]
+            if severity:
+                filtered_logs = [log for log in filtered_logs if log.get("severity") == severity]
+            return {"logs": filtered_logs[:limit], "source": "real"}
+    
+    # Fallback to sample logs
     logs = get_sample_logs(service, severity, limit)
-    return {"logs": logs}
+    return {"logs": logs, "source": "sample"}
 
-# 🟢 Fetch alerts (critical logs)
+# 🟢 Fetch alerts (critical logs) - Optimized for speed
 @app.get("/alerts")
-def get_alerts(limit: int = Query(10)):
-    error_logs = [log for log in SAMPLE_LOGS if log["severity"] == "ERROR"][:limit]
-    return {"alerts": error_logs}
+def get_alerts(limit: int = 5):
+    try:
+        # Pre-filter error logs for faster access
+        error_logs = [log for log in SAMPLE_LOGS if log["severity"] == "ERROR"][:limit]
+        
+        # Simple list comprehension for maximum speed
+        alerts = [
+            {
+                "id": log["id"],
+                "timestamp": log["timestamp"],
+                "service": log["service"],
+                "severity": log["severity"],
+                "raw_log": log["raw_log"],
+                "ai_summary": log["ai_summary"]
+            }
+            for log in error_logs
+        ]
+
+        return {"alerts": alerts}
+
+    except Exception as e:
+        return {"error": str(e)}
+# @app.get("/alerts")
+# def get_alerts(limit: int = Query(10)):
+#     error_logs = [log for log in SAMPLE_LOGS if log["severity"] == "ERROR"][:limit]
+#     return {"alerts": error_logs}
 
 
 # 🟢 Metrics (count by severity)
-@app.get("/metrics")
-def get_metrics():
+@lru_cache(maxsize=1)
+def _get_cached_metrics():
+    """Cached metrics calculation"""
     severity_counts = {}
     for log in SAMPLE_LOGS:
         severity = log["severity"]
@@ -123,17 +169,32 @@ def get_metrics():
     metrics = [{"severity": k, "count": v} for k, v in severity_counts.items()]
     return {"metrics": metrics}
 
+@app.get("/metrics")
+def get_metrics():
+    return _get_cached_metrics()
+
 # 🟢 Search in AI summaries
-@app.get("/search")
-def search_logs(q: str, limit: int = 20):
-    results = []
-    for log in SAMPLE_LOGS:
-        if (q.lower() in log["ai_summary"].lower() or 
-            q.lower() in log["raw_log"].lower() or
-            q.lower() in log["service"].lower()):
-            results.append(log)
+@app.post("/ask-ai")
+def ask_ai(query: dict):
+    user_input = query.get("question", "")
+    if not user_input:
+        return {"error": "No question provided"}
+
+    try:
+        answer = gemini.summarize_log(user_input)
+        return {"answer": answer}
+    except Exception as e:
+        return {"error": str(e)}
+# @app.get("/search")
+# def search_logs(q: str, limit: int = 20):
+#     results = []
+#     for log in SAMPLE_LOGS:
+#         if (q.lower() in log["ai_summary"].lower() or 
+#             q.lower() in log["raw_log"].lower() or
+#             q.lower() in log["service"].lower()):
+#             results.append(log)
     
-    return {"results": results[:limit]}
+#     return {"results": results[:limit]}
 
 # 🤖 AI-Powered Natural Language Log Search
 @app.post("/ai-search")
@@ -144,7 +205,7 @@ def ai_search_logs(query: dict):
         if not natural_query:
             raise HTTPException(status_code=400, detail="Query is required")
         
-        if not AI_AVAILABLE:
+        if not AI_AVAILABLE or not gemini:
             # Fallback to simple search
             results = []
             for log in SAMPLE_LOGS:
@@ -162,49 +223,49 @@ def ai_search_logs(query: dict):
                 "total_found": len(results)
             }
         
-        # Use Gemini to interpret the query and filter logs
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        prompt = f"""
-        You are SmartGuard AI. Analyze this natural language query: "{natural_query}"
-
-        Recent logs data (showing only the 5 most recent logs):
-        {json.dumps(SAMPLE_LOGS[:5], default=str)}
-
-        Based on the query, identify:
-        1. Which logs are relevant
-        2. What time range to focus on
-        3. What service(s) to filter by
-        4. What severity levels to include
-
-        Return a JSON response with:
-        {{
-            "interpreted_query": "What the user is looking for",
-            "filters": {{
-                "services": ["list", "of", "services"],
-                "severity": ["ERROR", "WARNING", "INFO"],
-                "time_range": "last 1 hour" or "last 24 hours" etc
-            }},
-            "summary": "Brief summary of what was found"
-        }}
-        """
-        
-        response = model.generate_content(prompt)
-
-        raw_output = response.text.strip()
-        # Remove Markdown code block markers if present
-        if raw_output.startswith('json'):
-            raw_output = raw_output[4:].strip()
-        if raw_output.startswith('```json'):
-            raw_output = raw_output[7:].strip()
-        if raw_output.startswith('```'):
-            raw_output = raw_output[3:].strip()
-        if raw_output.endswith('```'):
-            raw_output = raw_output[:-3].strip()
+        # For faster response, use a simpler AI analysis
         try:
+            # Quick AI analysis with shorter prompt
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            prompt = f"""
+            Analyze this query: "{natural_query}"
+            
+            Available services: {', '.join(SERVICES)}
+            
+            Return JSON:
+            {{
+                "interpreted_query": "What user wants",
+                "filters": {{
+                    "services": ["service1", "service2"],
+                    "severity": ["ERROR", "WARNING"],
+                    "time_range": "last 24 hours"
+                }},
+                "summary": "Brief summary"
+            }}
+            """
+            
+            response = model.generate_content(prompt)
+            raw_output = response.text.strip()
+            
+            # Clean up JSON response
+            if raw_output.startswith('json'):
+                raw_output = raw_output[4:].strip()
+            if raw_output.startswith('```json'):
+                raw_output = raw_output[7:].strip()
+            if raw_output.startswith('```'):
+                raw_output = raw_output[3:].strip()
+            if raw_output.endswith('```'):
+                raw_output = raw_output[:-3].strip()
+            
             ai_analysis = json.loads(raw_output)
-        except Exception as parse_err:
-            raise HTTPException(status_code=500, detail=f"AI search failed: Gemini did not return valid JSON. Raw output: {raw_output}")
-
+        except Exception as e:
+            # Fallback to simple analysis
+            ai_analysis = {
+                "interpreted_query": f"Searching for: {natural_query}",
+                "filters": {"services": [], "severity": [], "time_range": "last 24 hours"},
+                "summary": f"Searching logs for: {natural_query}"
+            }
+        
         # Apply filters based on AI analysis
         filtered_logs = SAMPLE_LOGS.copy()
 
@@ -276,9 +337,9 @@ def get_incident_timeline(hours: int = 24):
     return {"timeline": list(timeline.values())}
 
 # 🏥 Service Health Status
-@app.get("/service-health")
-def get_service_health():
-    """Get health status of all microservices"""
+@lru_cache(maxsize=1)
+def _get_cached_service_health():
+    """Cached service health calculation"""
     health_status = {}
     
     for service in SERVICES:
@@ -308,6 +369,11 @@ def get_service_health():
     
     return {"services": health_status}
 
+@app.get("/service-health")
+def get_service_health():
+    """Get health status of all microservices"""
+    return _get_cached_service_health()
+
 # 🤖 AI Assistant Chat
 @app.post("/ai-chat")
 def ai_chat(message: dict):
@@ -317,7 +383,7 @@ def ai_chat(message: dict):
         if not user_message:
             raise HTTPException(status_code=400, detail="Message is required")
         
-        if not AI_AVAILABLE:
+        if not AI_AVAILABLE or not gemini:
             return {
                 "response": "This is a demo version. AI features require a Gemini API key. Please configure GEMINI_API_KEY in your environment variables.",
                 "timestamp": datetime.now().isoformat()
@@ -337,23 +403,18 @@ def ai_chat(message: dict):
                 "error_count": error_count
             })
         
-        # Use Gemini to answer the question
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        prompt = f"""
-        You are SmartGuard AI Assistant. Answer this question: "{user_message}"
-        
+        # Prepare context data
+        context_data = f"""
         Recent system data:
         - Recent logs: {json.dumps(recent_logs, default=str)}
         - Service statistics: {json.dumps(service_stats, default=str)}
-        
-        Provide a helpful, concise answer about the system status, any issues, or suggestions.
-        If there are errors or warnings, explain what might be causing them and suggest fixes.
         """
         
-        response = model.generate_content(prompt)
+        # Use GeminiClient to answer the question
+        response_text = gemini.chat_response(user_message, context_data)
         
         return {
-            "response": response.text,
+            "response": response_text,
             "timestamp": datetime.now().isoformat()
         }
         
@@ -415,9 +476,37 @@ def get_enhanced_metrics():
         "anomalies": anomalies
     }
 
+# 🛡️ SmartGuard Analysis Endpoint
+@app.post("/smartguard-analyze")
+def smartguard_analyze(logs_data: dict):
+    """Use SmartGuard AI to analyze logs"""
+    try:
+        if not smartguard_integration.available:
+            return {"error": "SmartGuard integration not available"}
+        
+        logs = logs_data.get("logs", [])
+        if not logs:
+            return {"error": "No logs provided"}
+        
+        # Analyze with SmartGuard AI
+        analysis = smartguard_integration.analyze_with_ai(logs)
+        
+        # Send alert if needed
+        alert_sent = smartguard_integration.send_alert_if_needed(analysis)
+        
+        return {
+            "analysis": analysis,
+            "alert_sent": alert_sent,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"SmartGuard analysis failed: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     print("🚀 Starting SmartGuard API...")
-    print("📊 Using sample data - no database required")
+    print("📊 Using enhanced sample data with SmartGuard integration")
     print("🤖 AI features available:", AI_AVAILABLE)
+    print("🛡️ SmartGuard integration available:", smartguard_integration.available)
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -55,9 +55,9 @@ st.markdown("""
         border-left: 4px solid;
     }
     
-    .timeline-error { border-left-color: #dc3545; background-color: #f8d7da; }
-    .timeline-warning { border-left-color: #ffc107; background-color: #fff3cd; }
-    .timeline-normal { border-left-color: #28a745; background-color: #d4edda; }
+    .timeline-error { border-left-color: #dc3545; background-color: #8b2635; }
+    .timeline-warning { border-left-color: #ffc107; background-color: #b8860b; }
+    .timeline-normal { border-left-color: #28a745; background-color: #2d5a3d; }
     
     .service-node {
         padding: 1rem;
@@ -69,31 +69,35 @@ st.markdown("""
     
     .chat-message {
         padding: 1rem;
-        border-radius: 10px;
+        border-radius: 15px;
         margin: 0.5rem 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .user-message {
-        background-color: #e3f2fd;
+        background-color: #2d3748;
         margin-left: 20%;
+        border-left: 4px solid #2196f3;
     }
     
     .ai-message {
-        background-color: #f3e5f5;
+        background-color: #2d3748;
+        color: #ffffff;
         margin-right: 20%;
+        border-left: 4px solid #4caf50;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # Helper functions
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=60)  # Increased cache time to reduce API calls
 def fetch_data(endpoint, params=None):
     """Fetch data from API with caching"""
     try:
         if params:
-            response = requests.get(f"{API_BASE}/{endpoint}", params=params, timeout=5)
+            response = requests.get(f"{API_BASE}/{endpoint}", params=params, timeout=10)
         else:
-            response = requests.get(f"{API_BASE}/{endpoint}", timeout=5)
+            response = requests.get(f"{API_BASE}/{endpoint}", timeout=10)
         
         if response.status_code == 200:
             return response.json()
@@ -103,6 +107,9 @@ def fetch_data(endpoint, params=None):
     except requests.exceptions.ConnectionError:
         st.warning("⚠️ Cannot connect to API. Make sure the backend is running on http://localhost:8000")
         return {}
+    except requests.exceptions.Timeout:
+        st.warning("⚠️ API request timed out. The backend might be slow to respond.")
+        return {}
     except Exception as e:
         st.warning(f"Connection error: {e}")
         return {}
@@ -110,7 +117,7 @@ def fetch_data(endpoint, params=None):
 def post_data(endpoint, data):
     """Post data to API"""
     try:
-        response = requests.post(f"{API_BASE}/{endpoint}", json=data, timeout=10)
+        response = requests.post(f"{API_BASE}/{endpoint}", json=data, timeout=20)
         if response.status_code == 200:
             return response.json()
         else:
@@ -118,6 +125,9 @@ def post_data(endpoint, data):
             return {}
     except requests.exceptions.ConnectionError:
         st.warning("⚠️ Cannot connect to API. Make sure the backend is running on http://localhost:8000")
+        return {}
+    except requests.exceptions.Timeout:
+        st.warning("⚠️ API request timed out. The AI processing might be taking longer than expected.")
         return {}
     except Exception as e:
         st.warning(f"Connection error: {e}")
@@ -177,13 +187,34 @@ def show_dashboard_overview():
     """Main dashboard overview with key metrics"""
     st.header("📊 System Overview")
     
+    # API Health Check
+    with st.spinner("Checking API connection..."):
+        try:
+            health_response = requests.get(f"{API_BASE}/metrics", timeout=5)
+            if health_response.status_code == 200:
+                st.success("✅ API Backend Connected")
+            else:
+                st.error(f"❌ API Backend Error: {health_response.status_code}")
+        except requests.exceptions.ConnectionError:
+            st.error("❌ API Backend Not Connected - Make sure it's running on port 8000")
+        except requests.exceptions.Timeout:
+            st.warning("⚠️ API Backend Slow Response")
+        except Exception as e:
+            st.error(f"❌ API Connection Error: {e}")
+    
     # Key metrics row
     col1, col2, col3, col4 = st.columns(4)
     
-    # Get basic metrics
-    metrics_data = fetch_data("metrics")
-    alerts_data = fetch_data("alerts", {"limit": 5})
-    service_health = fetch_data("service-health")
+    # Get basic metrics with error handling
+    try:
+        metrics_data = fetch_data("metrics")
+        alerts_data = fetch_data("alerts", {"limit": 5})
+        service_health = fetch_data("service-health")
+    except Exception as e:
+        st.warning(f"Error fetching dashboard data: {e}")
+        metrics_data = {}
+        alerts_data = {}
+        service_health = {}
     
     with col1:
         if metrics_data and "metrics" in metrics_data:
@@ -740,7 +771,7 @@ def show_service_health():
             else:
                 return "background-color: #f8f9fa; color: #6c757d"
         
-        styled_df = service_df.style.applymap(color_status, subset=['Status'])
+        styled_df = service_df.style.map(color_status, subset=['Status'])
         st.dataframe(styled_df, use_container_width=True)
         
     else:
