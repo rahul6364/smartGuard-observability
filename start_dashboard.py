@@ -39,10 +39,10 @@ def start_api():
     """Start the FastAPI backend"""
     print("🚀 Starting FastAPI backend...")
     try:
-        # Start the main API (now works with sample data)
+        # Start the main API from backend directory
         api_process = subprocess.Popen([
             sys.executable, "api.py"
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        ], cwd="backend", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Wait a moment for API to start
         time.sleep(5)
@@ -74,10 +74,10 @@ def start_dashboard():
     print("🚀 Starting Streamlit dashboard...")
     try:
         subprocess.run([
-            sys.executable, "-m", "streamlit", "run", "dashboard.py",
+            sys.executable, "-m", "streamlit", "run", "enhanced_dashboard.py",
             "--server.port", "8501",
             "--server.address", "localhost"
-        ])
+        ], cwd="frontend")
     except KeyboardInterrupt:
         print("\n👋 Dashboard stopped by user")
     except Exception as e:

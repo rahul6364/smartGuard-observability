@@ -46,12 +46,11 @@ A comprehensive AI-powered monitoring and observability dashboard for microservi
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+
-- PostgreSQL database
+- Python 3.8+ OR Docker
 - Google Cloud Platform account (for Gemini AI)
-- Google Cloud Logging access
+- Google Cloud Logging access (optional)
 
-### Installation
+### Option 1: Docker Deployment (Recommended)
 
 1. **Clone the repository**
 ```bash
@@ -59,42 +58,53 @@ git clone <repository-url>
 cd smartguard-agent
 ```
 
-2. **Install dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-3. **Set up environment variables**
-Create a `.env` file with:
+2. **Set up environment variables**
+Copy `env_template.txt` to `.env` and configure:
 ```env
-# Database Configuration
-DB_HOST=your_postgres_host
-DB_PORT=5432
-DB_NAME=smartguard
-DB_USER=your_username
-DB_PASSWORD=your_password
-
-# Google Cloud Configuration
 GEMINI_API_KEY=your_gemini_api_key
-GOOGLE_APPLICATION_CREDENTIALS=path/to/your/service-account.json
-
-# Optional: Slack Integration
-SLACK_WEBHOOK_URL=your_slack_webhook_url
+GOOGLE_APPLICATION_CREDENTIALS=./key.json
 ```
 
-4. **Initialize the database**
+3. **Start with Docker Compose**
 ```bash
-python -c "from smartguard.db import init_db; init_db()"
+docker-compose up -d
 ```
 
-5. **Start the FastAPI backend**
+4. **Access the application**
+- Backend API: http://localhost:8000
+- Frontend Dashboard: http://localhost:8501
+
+### Option 2: Development Mode
+
+1. **Install dependencies**
 ```bash
+# Backend dependencies
+pip install -r backend/requirements.txt
+
+# Frontend dependencies  
+pip install -r frontend/requirements.txt
+```
+
+2. **Set up environment variables**
+Create a `.env` file with your configuration
+
+3. **Start both services**
+```bash
+python start_dev.py
+```
+
+### Option 3: Manual Start
+
+1. **Start backend**
+```bash
+cd backend
 python api.py
 ```
 
-6. **Start the Streamlit dashboard**
+2. **Start frontend** (in another terminal)
 ```bash
-streamlit run dashboard.py
+cd frontend
+streamlit run enhanced_dashboard.py
 ```
 
 ## 🏗️ Architecture
