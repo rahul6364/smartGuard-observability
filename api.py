@@ -166,16 +166,16 @@ def ai_search_logs(query: dict):
         model = genai.GenerativeModel("gemini-2.5-flash")
         prompt = f"""
         You are SmartGuard AI. Analyze this natural language query: "{natural_query}"
-        
-        Recent logs data:
-        {json.dumps(SAMPLE_LOGS[:20], default=str)}
-        
+
+        Recent logs data (showing only the 5 most recent logs):
+        {json.dumps(SAMPLE_LOGS[:5], default=str)}
+
         Based on the query, identify:
         1. Which logs are relevant
         2. What time range to focus on
         3. What service(s) to filter by
         4. What severity levels to include
-        
+
         Return a JSON response with:
         {{
             "interpreted_query": "What the user is looking for",
@@ -189,19 +189,33 @@ def ai_search_logs(query: dict):
         """
         
         response = model.generate_content(prompt)
-        ai_analysis = json.loads(response.text)
-        
+
+        raw_output = response.text.strip()
+        # Remove Markdown code block markers if present
+        if raw_output.startswith('json'):
+            raw_output = raw_output[4:].strip()
+        if raw_output.startswith('```json'):
+            raw_output = raw_output[7:].strip()
+        if raw_output.startswith('```'):
+            raw_output = raw_output[3:].strip()
+        if raw_output.endswith('```'):
+            raw_output = raw_output[:-3].strip()
+        try:
+            ai_analysis = json.loads(raw_output)
+        except Exception as parse_err:
+            raise HTTPException(status_code=500, detail=f"AI search failed: Gemini did not return valid JSON. Raw output: {raw_output}")
+
         # Apply filters based on AI analysis
         filtered_logs = SAMPLE_LOGS.copy()
-        
+
         if ai_analysis.get("filters", {}).get("services"):
             services = ai_analysis["filters"]["services"]
             filtered_logs = [log for log in filtered_logs if log["service"] in services]
-        
+
         if ai_analysis.get("filters", {}).get("severity"):
             severities = ai_analysis["filters"]["severity"]
             filtered_logs = [log for log in filtered_logs if log["severity"] in severities]
-        
+
         # Time range filtering (simplified)
         time_range = ai_analysis.get("filters", {}).get("time_range", "")
         if "1 hour" in time_range.lower():
@@ -212,7 +226,7 @@ def ai_search_logs(query: dict):
             cutoff = datetime.now() - timedelta(hours=24)
             filtered_logs = [log for log in filtered_logs 
                            if datetime.fromisoformat(log["timestamp"]) >= cutoff]
-        
+
         return {
             "ai_analysis": ai_analysis,
             "logs": filtered_logs[:20],
