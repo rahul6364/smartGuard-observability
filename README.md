@@ -34,6 +34,8 @@ An AI-powered observability and alerting dashboard that analyzes logs, detects a
 - Screenshots:
   - `docs/screenshot1.png`
   - `docs/screenshot2.png`
+  - `docs/screenshot2.png`
+  - `docs/screenshot2.png`
 
 Components:
 - Frontend (Streamlit)
@@ -64,9 +66,10 @@ Choose one of the following options.
 ```bash
 git clone https://github.com/rahul6364/smartGuard-observability
 cd smartGuard-observability
-
+```
 
 3) Create a Service Account in Google Cloud:  
+```bash
    - Go to [IAM & Admin → Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)  
    - Click **Create Service Account** → assign role **Logging Viewer**  
    - After creation → **Keys** → **Add Key** → **Create new key** → select **JSON**  
@@ -74,7 +77,7 @@ cd smartGuard-observability
 ```
 
 4) Create a `.env` file (optional; defaults exist in compose)
-```env
+
  Set environment variables
 ```bash
 export GEMINI_API_KEY=your_gemini_key
@@ -98,13 +101,15 @@ docker compose up -d --build
 - Frontend: `http://localhost:8501`
 - Backend metrics: `http://localhost:8000/metrics`
 
-```
 
 
 
-## GKE Cloud Shell Setup
+
+
+### Option B: GKE Cloud Shell Setup
 
 1) Open Cloud Shell and clone the repo
+
 ```bash
 git clone https://github.com/rahul6364/smartGuard-observability
 cd smartGuard-observability
@@ -116,28 +121,27 @@ export PROJECT_ID=<your project id>
 export REGION=us-central1
 
 Place the 
-GEMINI_API_KEY=your_gemini_key | base64
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ | base64
-
+GEMINI_API_KEY= base64 encoded {your_gemini_key}
+SLACK_WEBHOOK_URL= base64 encoded {SLACK_WEBHOOK_URL}
 in sg-secrets.yml
 
-place the 
-
-GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/key.json  base64
+Place the
+GOOGLE_APPLICATION_CREDENTIALS= base64 encoded $(pwd)/key.json
 in sg-key.yml
- # upload your key.json to Cloud Shell
+
 ```
 
-3) Create a minimal GKE cluster
-```bash
-  
+3) Set the Google Cloud project and region and ensure the Google Kubernetes Engine API is enabled.
+
+```bash  
   export PROJECT_ID=<PROJECT_ID>
 export REGION=us-central1 
 gcloud services enable container.googleapis.com \
-  --project=${PROJECT_ID} \
+  --project=${PROJECT_ID} 
+```
   
-
-
+4) Create a GKE cluster and get the credentials for it.
+```bash
 gcloud container clusters create smartguard \
     --project=${PROJECT_ID} \
     --region=us-east1 \
@@ -146,17 +150,17 @@ gcloud container clusters create smartguard \
     --machine-type=e2-medium
 ```
 
-4) Apply Kubernetes manifests
+5) Apply Kubernetes manifests
 ```bash
 kubectl apply -f k8s/sg-namespace.yml
 kubectl apply -f k8s/
 ```
-5) Wait for the pods to be ready.
+6) Wait for the pods to be ready.
 ```bash
 kubectl get all -n smartguard
 ```
 
-6) Get external IP for the frontend
+7) Get external IP for the frontend
 ```bash
 kubectl get svc smartguard -n smartguard -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 # Open http://<EXTERNAL-IP>:8501
@@ -174,16 +178,6 @@ kubectl get svc smartguard -n smartguard -o jsonpath='{.status.loadBalancer.ingr
 - Do not commit sensitive keys. Use environment variables, Kubernetes Secrets, or local `.env` files excluded by `.gitignore`.
 
 ---
-
-## Screenshots
-
-Insert your screenshots here for judges/demo:
-
-![Dashboard](smartguard-agent\docs\Screenshot 2025-09-21 020414.png)(smartguard-agent\docs\Screenshot 2025-09-22 134104.png)
-(smartguard-agent\docs\Screenshot 2025-09-22 134128.png)
-
-![AI Insights](smartguard-agent\docs\Screenshot 2025-09-22 134314.png)
-(smartguard-agent\docs\Screenshot 2025-09-22 134340.png)
 
 
 
