@@ -51,45 +51,13 @@ Choose one of the following options.
 
 2) Clone the repository
 ```bash
-git clone https://github.com/your-org/smartguard-ai-dashboard.git
-cd smartguard-ai-dashboard/smartguard-agent
+git clone https://github.com/rahul6364/smartGuard-observability
+cd smartGuard-observability
 ```
 
 3) Create a `.env` file (optional; defaults exist in compose)
 ```env
-GEMINI_API_KEY=your_gemini_key
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
-```
-
-4) Start the stack
-```bash
-docker compose up -d --build
-```
-
-5) Open in browser
-- Frontend: `http://localhost:8501`
-- Backend metrics: `http://localhost:8000/metrics`
-
-
-### Option B: Run locally (Python)
-
-1) Prerequisites: Python 3.10+
-
-2) Clone the repository and create a virtualenv
-```bash
-git clone https://github.com/your-org/smartguard-ai-dashboard.git
-cd smartguard-ai-dashboard/smartguard-agent
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-```
-
-3) Install dependencies
-```bash
-pip install -r backend/requirements.txt
-pip install -r frontend/requirements.txt
-```
-
-4) Set environment variables
+ Set environment variables
 ```bash
 export GEMINI_API_KEY=your_gemini_key
 export SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
@@ -101,45 +69,15 @@ export DB_USER=postgres
 export DB_PASSWORD=password
 ```
 
-5) Start Postgres locally (any method, e.g., Docker)
+4) Start the stack
 ```bash
-docker run --name smartguard-db -e POSTGRES_PASSWORD=password -e POSTGRES_DB=smartguard -p 5432:5432 -d postgres:15-alpine
+docker compose up -d --build
 ```
 
-6) Run backend and frontend
-```bash
-python backend/api.py
-streamlit run frontend/enhanced_dashboard.py --server.port=8501 --server.address=0.0.0.0
-```
-
-7) Open in browser
+5) Open in browser
 - Frontend: `http://localhost:8501`
 - Backend metrics: `http://localhost:8000/metrics`
 
-
-### Option C: Kubernetes locally (Minikube or Kind)
-
-1) Start cluster
-```bash
-minikube start
-```
-
-2) Apply manifests
-```bash
-kubectl apply -f k8s/sg-namespace.yml
-kubectl apply -f k8s/sg-config.yml
-kubectl apply -f k8s/sg-secrets.yml     # Edit with your keys if desired
-kubectl apply -f k8s/sg-key.yml         # Replace with your own base64-encoded key.json
-kubectl apply -f k8s/db-deployment.yml
-kubectl apply -f k8s/sg-deployment.yml
-```
-
-3) Access the app
-```bash
-minikube service smartguard -n smartguard --url
-# Or port-forward
-kubectl -n smartguard port-forward svc/smartguard 8501:8501 &
-kubectl -n smartguard port-forward svc/smartguard 8000:8000 &
 ```
 
 ---
@@ -148,13 +86,13 @@ kubectl -n smartguard port-forward svc/smartguard 8000:8000 &
 
 1) Open Cloud Shell and clone the repo
 ```bash
-git clone https://github.com/your-org/smartguard-ai-dashboard.git
-cd smartguard-ai-dashboard/smartguard-agent
+git clone https://github.com/rahul6364/smartGuard-observability
+cd smartGuard-observability
 ```
 
 2) Export environment variables
 ```bash
-export PROJECT_ID=$(gcloud config get-value project)
+export PROJECT_ID=<your project id>
 export REGION=us-central1
 export GEMINI_API_KEY=your_gemini_key
 export SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
@@ -175,16 +113,12 @@ gcloud container clusters get-credentials smartguard-cluster --region "$REGION" 
 4) Apply Kubernetes manifests
 ```bash
 kubectl apply -f k8s/sg-namespace.yml
-kubectl apply -f k8s/sg-config.yml
-kubectl apply -f k8s/sg-secrets.yml      # Edit with your keys before applying
-kubectl apply -f k8s/sg-key.yml          # Replace with your base64-encoded key.json
-kubectl apply -f k8s/db-deployment.yml
-kubectl apply -f k8s/sg-deployment.yml
+kubectl apply -f k8s/
 ```
 
 5) Get external IP for the frontend
 ```bash
-kubectl get svc smartguard -n smartguard
+kubectl get svc smartguard -n smartguard -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 # Open http://<EXTERNAL-IP>:8501
 ```
 
