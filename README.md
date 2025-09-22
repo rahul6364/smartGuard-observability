@@ -1,6 +1,6 @@
 ### SmartGuard AI Dashboard
 
-[➡️ Jump to Local Setup](#local-setup) • [☁️ Jump to GKE Cloud Shell Setup](#gke-cloud-shell-setup)
+[➡️ Jump to Local Setup](#option-a-run-with-docker-compose-recommended) • [☁️ Jump to GKE Cloud Shell Setup](#option-b-gke-cloud-shell-setup)
 
 An AI-powered observability and alerting dashboard that analyzes logs, detects anomalies, and notifies your team in real-time. Built for speed during a hackathon, deployable locally or on GKE.
 
@@ -30,7 +30,7 @@ An AI-powered observability and alerting dashboard that analyzes logs, detects a
 
 ## Architecture Diagram & Screenshots
 
-- Architecture: `docs/architecture.png`
+- Architecture: [docs/architecture.md](docs/architecture.md) (Mermaid diagram)
 ## 📸 Screenshots
 ![Screenshot 1](docs/screenshot1.png)
 ![Screenshot 2](docs/screenshot2.png)
@@ -119,7 +119,7 @@ cd smartGuard-observability
 ```bash
 export PROJECT_ID=<your project id>
 export REGION=us-central1
-
+```
 👉 For sg-secrets.yml
 ```bash
 apiVersion: v1
