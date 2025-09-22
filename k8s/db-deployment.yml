@@ -40,8 +40,10 @@ spec:
                 secretKeyRef:
                   name: smartguard-secrets
                   key: DB_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
-            - mountPath: /var/lib/postgresql/data
+            - mountPath: /var/lib/postgresql/data/pgdata  
               name: postgres-storage
       volumes:
         - name: postgres-storage
