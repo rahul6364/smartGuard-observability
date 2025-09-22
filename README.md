@@ -1,4 +1,231 @@
-# 🛡️ SmartGuard AI Dashboard
+### SmartGuard AI Dashboard
+
+[➡️ Jump to Local Setup](#local-setup) • [☁️ Jump to GKE Cloud Shell Setup](#gke-cloud-shell-setup)
+
+An AI-powered observability and alerting dashboard that analyzes logs, detects anomalies, and notifies your team in real-time. Built for speed during a hackathon, deployable locally or on GKE.
+
+---
+
+## Features
+
+- **AI-driven log analysis and alerting**: Uses Gemini AI to summarize, search, and detect anomalies in logs.
+- **Streamlit frontend + FastAPI backend**: Clean separation of concerns with a responsive UI.
+- **PostgreSQL database**: Persists analyzed logs and insights for querying and dashboards.
+- **Slack notifications integration**: Sends actionable alerts directly to your Slack channel.
+- **GCP Logging Explorer integration**: Optional integration to pull real logs from Google Cloud.
+- **Runs locally or on GKE**: Quick Docker Compose or Kubernetes manifests ready for Minikube/GKE.
+
+---
+
+## Architecture Diagram & Screenshots
+
+- Architecture: `docs/architecture.png`
+- Screenshots:
+  - `docs/screenshot1.png`
+  - `docs/screenshot2.png`
+
+Components:
+- Frontend (Streamlit)
+- Backend (FastAPI)
+- PostgreSQL
+- Slack
+- Gemini AI
+- Kubernetes (Minikube/GKE)
+
+---
+
+## Reference Apps
+
+- Monitored application (GKE): [GoogleCloudPlatform/microservices-demo](https://github.com/GoogleCloudPlatform/microservices-demo)
+- This dashboard repo: [rahul6364/smartGuard-observability](https://github.com/rahul6364/smartGuard-observability)
+
+---
+
+## Local Setup
+
+Choose one of the following options.
+
+### Option A: Run with Docker Compose (recommended)
+
+1) Prerequisites: Docker Desktop
+
+2) Clone the repository
+```bash
+git clone https://github.com/your-org/smartguard-ai-dashboard.git
+cd smartguard-ai-dashboard/smartguard-agent
+```
+
+3) Create a `.env` file (optional; defaults exist in compose)
+```env
+GEMINI_API_KEY=your_gemini_key
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
+```
+
+4) Start the stack
+```bash
+docker compose up -d --build
+```
+
+5) Open in browser
+- Frontend: `http://localhost:8501`
+- Backend metrics: `http://localhost:8000/metrics`
+
+
+### Option B: Run locally (Python)
+
+1) Prerequisites: Python 3.10+
+
+2) Clone the repository and create a virtualenv
+```bash
+git clone https://github.com/your-org/smartguard-ai-dashboard.git
+cd smartguard-ai-dashboard/smartguard-agent
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+```
+
+3) Install dependencies
+```bash
+pip install -r backend/requirements.txt
+pip install -r frontend/requirements.txt
+```
+
+4) Set environment variables
+```bash
+export GEMINI_API_KEY=your_gemini_key
+export SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
+export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/key.json   # path to your GCP key.json
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=smartguard
+export DB_USER=postgres
+export DB_PASSWORD=password
+```
+
+5) Start Postgres locally (any method, e.g., Docker)
+```bash
+docker run --name smartguard-db -e POSTGRES_PASSWORD=password -e POSTGRES_DB=smartguard -p 5432:5432 -d postgres:15-alpine
+```
+
+6) Run backend and frontend
+```bash
+python backend/api.py
+streamlit run frontend/enhanced_dashboard.py --server.port=8501 --server.address=0.0.0.0
+```
+
+7) Open in browser
+- Frontend: `http://localhost:8501`
+- Backend metrics: `http://localhost:8000/metrics`
+
+
+### Option C: Kubernetes locally (Minikube or Kind)
+
+1) Start cluster
+```bash
+minikube start
+```
+
+2) Apply manifests
+```bash
+kubectl apply -f k8s/sg-namespace.yml
+kubectl apply -f k8s/sg-config.yml
+kubectl apply -f k8s/sg-secrets.yml     # Edit with your keys if desired
+kubectl apply -f k8s/sg-key.yml         # Replace with your own base64-encoded key.json
+kubectl apply -f k8s/db-deployment.yml
+kubectl apply -f k8s/sg-deployment.yml
+```
+
+3) Access the app
+```bash
+minikube service smartguard -n smartguard --url
+# Or port-forward
+kubectl -n smartguard port-forward svc/smartguard 8501:8501 &
+kubectl -n smartguard port-forward svc/smartguard 8000:8000 &
+```
+
+---
+
+## GKE Cloud Shell Setup
+
+1) Open Cloud Shell and clone the repo
+```bash
+git clone https://github.com/your-org/smartguard-ai-dashboard.git
+cd smartguard-ai-dashboard/smartguard-agent
+```
+
+2) Export environment variables
+```bash
+export PROJECT_ID=$(gcloud config get-value project)
+export REGION=us-central1
+export GEMINI_API_KEY=your_gemini_key
+export SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
+export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/key.json   # upload your key.json to Cloud Shell
+```
+
+3) Create a minimal GKE cluster
+```bash
+gcloud container clusters create smartguard-cluster \
+  --project "$PROJECT_ID" \
+  --region "$REGION" \
+  --num-nodes 1 \
+  --machine-type e2-standard-2
+
+gcloud container clusters get-credentials smartguard-cluster --region "$REGION" --project "$PROJECT_ID"
+```
+
+4) Apply Kubernetes manifests
+```bash
+kubectl apply -f k8s/sg-namespace.yml
+kubectl apply -f k8s/sg-config.yml
+kubectl apply -f k8s/sg-secrets.yml      # Edit with your keys before applying
+kubectl apply -f k8s/sg-key.yml          # Replace with your base64-encoded key.json
+kubectl apply -f k8s/db-deployment.yml
+kubectl apply -f k8s/sg-deployment.yml
+```
+
+5) Get external IP for the frontend
+```bash
+kubectl get svc smartguard -n smartguard
+# Open http://<EXTERNAL-IP>:8501
+```
+
+---
+
+## Notes
+
+- Please provide your own:
+  - **Gemini API key** (`GEMINI_API_KEY`)
+  - **Slack webhook URL** (`SLACK_WEBHOOK_URL`)
+  - **GCP service account key** (`key.json` for Logging Explorer)
+- If keys are not provided, the app runs with mocked/sample data, so you can still demo the UI and flows.
+- Do not commit sensitive keys. Use environment variables, Kubernetes Secrets, or local `.env` files excluded by `.gitignore`.
+
+---
+
+## Screenshots
+
+Insert your screenshots here for judges/demo:
+
+![Dashboard](docs/screenshot1.png)
+
+![AI Insights](docs/screenshot2.png)
+
+---
+
+## Tech Stack
+
+- FastAPI, Streamlit, SQLAlchemy, psycopg2
+- PostgreSQL
+- Google Gemini API, Google Cloud Logging
+- Slack Webhooks
+- Docker, Kubernetes (Minikube/GKE)
+
+---
+
+## License
+
+MIT (or your preferred license)
+
+<!-- # 🛡️ SmartGuard AI Dashboard
 
 A comprehensive AI-powered monitoring and observability dashboard for microservices, built with Streamlit and powered by Google Gemini AI.
 
@@ -288,4 +515,4 @@ For support and questions:
 
 ---
 
-**SmartGuard AI Dashboard** - Making microservices monitoring intelligent and accessible! 🛡️🤖
+**SmartGuard AI Dashboard** - Making microservices monitoring intelligent and accessible! 🛡️🤖 -->
