@@ -5,6 +5,17 @@
 An AI-powered observability and alerting dashboard that analyzes logs, detects anomalies, and notifies your team in real-time. Built for speed during a hackathon, deployable locally or on GKE.
 
 ---
+---
+
+## Tech Stack
+
+- FastAPI, Streamlit, SQLAlchemy, psycopg2
+- PostgreSQL
+- Google Gemini API, Google Cloud Logging
+- Slack Webhooks
+- Docker, Kubernetes (Minikube/GKE)
+
+---
 
 ## Features
 
@@ -53,9 +64,16 @@ Choose one of the following options.
 ```bash
 git clone https://github.com/rahul6364/smartGuard-observability
 cd smartGuard-observability
+
+
+3) Create a Service Account in Google Cloud:  
+   - Go to [IAM & Admin → Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)  
+   - Click **Create Service Account** → assign role **Logging Viewer**  
+   - After creation → **Keys** → **Add Key** → **Create new key** → select **JSON**  
+   - Download this file as `key.json` and place it in your project root
 ```
 
-3) Create a `.env` file (optional; defaults exist in compose)
+4) Create a `.env` file (optional; defaults exist in compose)
 ```env
  Set environment variables
 ```bash
@@ -67,6 +85,8 @@ export DB_PORT=5432
 export DB_NAME=smartguard
 export DB_USER=postgres
 export DB_PASSWORD=password
+
+ 
 ```
 
 4) Start the stack
@@ -80,7 +100,7 @@ docker compose up -d --build
 
 ```
 
----
+
 
 ## GKE Cloud Shell Setup
 
@@ -94,20 +114,36 @@ cd smartGuard-observability
 ```bash
 export PROJECT_ID=<your project id>
 export REGION=us-central1
-export GEMINI_API_KEY=your_gemini_key
-export SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
-export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/key.json   # upload your key.json to Cloud Shell
+
+Place the 
+GEMINI_API_KEY=your_gemini_key | base64
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ | base64
+
+in sg-secrets.yml
+
+place the 
+
+GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/key.json  base64
+in sg-key.yml
+ # upload your key.json to Cloud Shell
 ```
 
 3) Create a minimal GKE cluster
 ```bash
-gcloud container clusters create smartguard-cluster \
-  --project "$PROJECT_ID" \
-  --region "$REGION" \
-  --num-nodes 1 \
-  --machine-type e2-standard-2
+  
+  export PROJECT_ID=<PROJECT_ID>
+export REGION=us-central1 
+gcloud services enable container.googleapis.com \
+  --project=${PROJECT_ID} \
+  
 
-gcloud container clusters get-credentials smartguard-cluster --region "$REGION" --project "$PROJECT_ID"
+
+gcloud container clusters create smartguard \
+    --project=${PROJECT_ID} \
+    --region=us-east1 \
+    --num-nodes=1 \
+    --disk-size=20 \
+    --machine-type=e2-medium
 ```
 
 4) Apply Kubernetes manifests
@@ -115,8 +151,12 @@ gcloud container clusters get-credentials smartguard-cluster --region "$REGION" 
 kubectl apply -f k8s/sg-namespace.yml
 kubectl apply -f k8s/
 ```
+5) Wait for the pods to be ready.
+```bash
+kubectl get all -n smartguard
+```
 
-5) Get external IP for the frontend
+6) Get external IP for the frontend
 ```bash
 kubectl get svc smartguard -n smartguard -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 # Open http://<EXTERNAL-IP>:8501
@@ -139,25 +179,88 @@ kubectl get svc smartguard -n smartguard -o jsonpath='{.status.loadBalancer.ingr
 
 Insert your screenshots here for judges/demo:
 
-![Dashboard](docs/screenshot1.png)
+![Dashboard](smartguard-agent\docs\Screenshot 2025-09-21 020414.png)(smartguard-agent\docs\Screenshot 2025-09-22 134104.png)
+(smartguard-agent\docs\Screenshot 2025-09-22 134128.png)
 
-![AI Insights](docs/screenshot2.png)
+![AI Insights](smartguard-agent\docs\Screenshot 2025-09-22 134314.png)
+(smartguard-agent\docs\Screenshot 2025-09-22 134340.png)
 
----
 
-## Tech Stack
 
-- FastAPI, Streamlit, SQLAlchemy, psycopg2
-- PostgreSQL
-- Google Gemini API, Google Cloud Logging
-- Slack Webhooks
-- Docker, Kubernetes (Minikube/GKE)
+🏗️ Architecture
 
----
+### Backend (FastAPI)
+- **RESTful API**: Clean API endpoints for all dashboard features
+- **AI Integration**: Google Gemini AI for natural language processing
+- **Database Layer**: PostgreSQL with SQLAlchemy ORM
+- **Real-time Data**: Live log processing and analysis
 
-## License
+### Frontend (Streamlit)
+- **Modern UI**: Clean, responsive design with custom CSS
+- **Interactive Components**: Plotly charts, network graphs, and real-time updates
+- **AI Chat Interface**: Conversational AI assistant
+- **Multi-page Navigation**: Organized feature sections
 
-MIT (or your preferred license)
+### AI Features
+- **Natural Language Processing**: Query interpretation and log analysis
+- **Anomaly Detection**: Pattern recognition in system metrics
+- **Smart Summarization**: AI-generated insights from raw data
+- **Contextual Responses**: AI assistant with system awareness
+
+## 📊 Dashboard Sections
+
+### 🏠 Dashboard Overview
+- Key system metrics at a glance
+- Recent activity feed
+- Health status summary
+- Quick access to critical information
+
+### 🔍 Log Explorer
+- Natural language search interface
+- AI-powered query interpretation
+- Filtered results with AI summaries
+- Quick search examples
+
+### 📊 Timeline
+- Interactive event timeline
+- Visual event tracking
+- Hourly event aggregation
+- Detailed event inspection
+
+### 🤖 AI Assistant
+- Chat interface for system questions
+- Context-aware responses
+- Quick question buttons
+- Conversation history
+
+### 🏥 Service Health
+- Microservice network visualization
+- Health status indicators
+- Error rate monitoring
+- Service dependency mapping
+
+### 🚨 Alerts
+- Active alert management
+- AI-generated incident reports
+- Suggested actions
+- Alert trend analysis
+
+### 📈 Metrics
+- Enhanced metrics with anomaly detection
+- System health scoring
+- Service performance heatmaps
+- Historical trend analysis
+
+🔮 Future Enhancements
+
+- Machine learning model training on historical data
+- Predictive analytics for system failures
+- Integration with more monitoring tools
+- Advanced visualization options
+- Mobile-responsive design improvements
+- Multi-tenant support
+- Custom dashboard creation
+- Advanced AI model fine-tuning
 
 <!-- # 🛡️ SmartGuard AI Dashboard
 
@@ -268,69 +371,7 @@ cd frontend
 streamlit run enhanced_dashboard.py
 ```
 
-## 🏗️ Architecture
-
-### Backend (FastAPI)
-- **RESTful API**: Clean API endpoints for all dashboard features
-- **AI Integration**: Google Gemini AI for natural language processing
-- **Database Layer**: PostgreSQL with SQLAlchemy ORM
-- **Real-time Data**: Live log processing and analysis
-
-### Frontend (Streamlit)
-- **Modern UI**: Clean, responsive design with custom CSS
-- **Interactive Components**: Plotly charts, network graphs, and real-time updates
-- **AI Chat Interface**: Conversational AI assistant
-- **Multi-page Navigation**: Organized feature sections
-
-### AI Features
-- **Natural Language Processing**: Query interpretation and log analysis
-- **Anomaly Detection**: Pattern recognition in system metrics
-- **Smart Summarization**: AI-generated insights from raw data
-- **Contextual Responses**: AI assistant with system awareness
-
-## 📊 Dashboard Sections
-
-### 🏠 Dashboard Overview
-- Key system metrics at a glance
-- Recent activity feed
-- Health status summary
-- Quick access to critical information
-
-### 🔍 Log Explorer
-- Natural language search interface
-- AI-powered query interpretation
-- Filtered results with AI summaries
-- Quick search examples
-
-### 📊 Timeline
-- Interactive event timeline
-- Visual event tracking
-- Hourly event aggregation
-- Detailed event inspection
-
-### 🤖 AI Assistant
-- Chat interface for system questions
-- Context-aware responses
-- Quick question buttons
-- Conversation history
-
-### 🏥 Service Health
-- Microservice network visualization
-- Health status indicators
-- Error rate monitoring
-- Service dependency mapping
-
-### 🚨 Alerts
-- Active alert management
-- AI-generated incident reports
-- Suggested actions
-- Alert trend analysis
-
-### 📈 Metrics
-- Enhanced metrics with anomaly detection
-- System health scoring
-- Service performance heatmaps
-- Historical trend analysis
+## 
 
 ## 🔧 Configuration
 
@@ -436,16 +477,7 @@ For support and questions:
 - Review the API endpoints
 - Contact the development team
 
-## 🔮 Future Enhancements
-
-- Machine learning model training on historical data
-- Predictive analytics for system failures
-- Integration with more monitoring tools
-- Advanced visualization options
-- Mobile-responsive design improvements
-- Multi-tenant support
-- Custom dashboard creation
-- Advanced AI model fine-tuning
+## 
 
 ---
 
