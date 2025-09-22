@@ -31,11 +31,11 @@ An AI-powered observability and alerting dashboard that analyzes logs, detects a
 ## Architecture Diagram & Screenshots
 
 - Architecture: `docs/architecture.png`
-- Screenshots:
-  - `docs/screenshot1.png`
-  - `docs/screenshot2.png`
-  - `docs/screenshot2.png`
-  - `docs/screenshot2.png`
+## 📸 Screenshots
+![Screenshot 1](docs/screenshot1.png)
+![Screenshot 2](docs/screenshot2.png)
+![Screenshot 2](docs/screenshot3.png)
+![Screenshot 2](docs/screenshot4.png)
 
 Components:
 - Frontend (Streamlit)
