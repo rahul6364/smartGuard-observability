@@ -120,16 +120,38 @@ cd smartGuard-observability
 export PROJECT_ID=<your project id>
 export REGION=us-central1
 
-Place the 
-GEMINI_API_KEY= base64 encoded {your_gemini_key}
-SLACK_WEBHOOK_URL= base64 encoded {SLACK_WEBHOOK_URL}
-in sg-secrets.yml
-
-Place the
-GOOGLE_APPLICATION_CREDENTIALS= base64 encoded $(pwd)/key.json
-in sg-key.yml
-
+👉 For sg-secrets.yml
+```bash
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sg-secrets
+  namespace: smartguard
+type: Opaque
+data:
+  GEMINI_API_KEY: <base64-encoded-gemini-api-key>
+  SLACK_WEBHOOK_URL: <base64-encoded-slack-webhook-url>
 ```
+Encode like this:
+```bash
+echo -n "your-gemini-api-key" | base64
+echo -n "https://hooks.slack.com/services/xxxx" | base64
+```
+👉 For sg-key.yml (Service Account Key.json)
+```bash
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sg-key
+  namespace: smartguard
+type: Opaque
+data:
+  GOOGLE_APPLICATION_CREDENTIALS.json: <base64-encoded-key-json>
+```
+Encode like this:
+```bash
+base64 key.json | tr -d '\n' > key.json.b64
+```bash
 
 3) Set the Google Cloud project and region and ensure the Google Kubernetes Engine API is enabled.
 
@@ -141,6 +163,7 @@ gcloud services enable container.googleapis.com \
 ```
   
 4) Create a GKE cluster and get the credentials for it.
+
 ```bash
 gcloud container clusters create smartguard \
     --project=${PROJECT_ID} \
