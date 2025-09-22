@@ -2,69 +2,70 @@
 
 ```mermaid
 graph TB
-    %% External Services
-    GCP[Google Cloud Platform]
-    GEMINI[Google Gemini AI API]
-    SLACK[Slack Webhooks]
-    
-    %% User Interface
-    USER[👤 User/DevOps Engineer]
-    BROWSER[🌐 Web Browser]
+    %% User Layer
+    USER[👤 DevOps Engineer]
+    USER --> BROWSER[🌐 Web Browser]
     
     %% Frontend Layer
-    STREAMLIT[📊 Streamlit Frontend<br/>Port 8501]
+    BROWSER --> STREAMLIT[📊 Streamlit Dashboard<br/>Port 8501<br/>Interactive UI]
     
     %% Backend Layer
-    FASTAPI[⚡ FastAPI Backend<br/>Port 8000]
+    STREAMLIT --> FASTAPI[⚡ FastAPI Backend<br/>Port 8000<br/>REST API]
     
     %% Database Layer
-    POSTGRES[(🗄️ PostgreSQL<br/>Port 5432)]
+    FASTAPI --> POSTGRES[(🗄️ PostgreSQL<br/>Port 5432<br/>Data Storage)]
     
-    %% AI Processing
-    AI_ENGINE[🤖 AI Processing Engine<br/>- Log Analysis<br/>- Anomaly Detection<br/>- Natural Language Processing]
+    %% AI Processing Layer
+    FASTAPI --> AI_ENGINE[🤖 AI Engine<br/>Log Analysis<br/>Anomaly Detection]
+    AI_ENGINE --> GEMINI[🧠 Google Gemini AI<br/>Natural Language Processing]
     
-    %% Monitoring Sources
-    GCP_LOGS[📋 GCP Logging Explorer<br/>Real-time Logs]
-    SAMPLE_DATA[📊 Sample Data<br/>Mock Logs for Demo]
+    %% Data Sources
+    GCP_LOGS[📋 GCP Logging<br/>Real-time Logs] --> AI_ENGINE
+    SAMPLE_DATA[📊 Sample Data<br/>Demo Logs] --> AI_ENGINE
     
-    %% Container Orchestration
-    DOCKER[🐳 Docker Compose<br/>Local Development]
-    K8S[☸️ Kubernetes<br/>GKE/Minikube]
+    %% External Services
+    FASTAPI --> SLACK[💬 Slack Alerts<br/>Notifications]
     
-    %% Data Flow
-    USER --> BROWSER
-    BROWSER --> STREAMLIT
-    STREAMLIT --> FASTAPI
-    FASTAPI --> POSTGRES
-    FASTAPI --> AI_ENGINE
-    AI_ENGINE --> GEMINI
-    AI_ENGINE --> GCP_LOGS
-    AI_ENGINE --> SAMPLE_DATA
-    FASTAPI --> SLACK
+    %% Deployment Options
+    subgraph "🐳 Local Development"
+        DOCKER[📦 Docker Compose<br/>All Services]
+        DOCKER -.-> STREAMLIT
+        DOCKER -.-> FASTAPI
+        DOCKER -.-> POSTGRES
+    end
     
-    %% Container Deployment
-    DOCKER --> STREAMLIT
-    DOCKER --> FASTAPI
-    DOCKER --> POSTGRES
+    subgraph "☸️ Production Deployment"
+        K8S[☸️ Kubernetes<br/>GKE/Minikube]
+        K8S -.-> STREAMLIT
+        K8S -.-> FASTAPI
+        K8S -.-> POSTGRES
+    end
     
-    K8S --> STREAMLIT
-    K8S --> FASTAPI
-    K8S --> POSTGRES
+    %% External Cloud Services
+    subgraph "☁️ Google Cloud Platform"
+        GCP[🌐 GCP Services]
+        GCP --> GCP_LOGS
+        GCP --> GEMINI
+    end
     
-    %% Styling
-    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef database fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef ai fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef external fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef container fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    %% Styling with better contrast
+    classDef user fill:#ffebee,stroke:#c62828,stroke-width:3px,color:#000
+    classDef frontend fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#000
+    classDef backend fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px,color:#000
+    classDef database fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px,color:#000
+    classDef ai fill:#fff8e1,stroke:#f57c00,stroke-width:3px,color:#000
+    classDef external fill:#fce4ec,stroke:#ad1457,stroke-width:3px,color:#000
+    classDef container fill:#f1f8e9,stroke:#558b2f,stroke-width:3px,color:#000
+    classDef cloud fill:#e0f2f1,stroke:#00695c,stroke-width:3px,color:#000
     
+    class USER user
     class STREAMLIT frontend
     class FASTAPI backend
     class POSTGRES database
     class AI_ENGINE,GEMINI ai
-    class GCP,SLACK,GCP_LOGS external
+    class SLACK,GCP_LOGS,SAMPLE_DATA external
     class DOCKER,K8S container
+    class GCP cloud
 ```
 
 ## Component Details
