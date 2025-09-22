@@ -39,9 +39,11 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-    - port: 8000
+    - name: http-api
+      port: 8000
       targetPort: 8000
-    - port: 8501
+    - name: http-ui
+      port: 8501
       targetPort: 8501
   selector:
     app: smartguard
