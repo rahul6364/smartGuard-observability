@@ -1,19 +1,20 @@
-version: '3.8'
-
 services:
   smartguard:
     build: .
     container_name: smartguard-dashboard
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"  # Backend API
       - "8501:8501"  # Frontend Dashboard
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - DB_HOST=${DB_HOST:-localhost}
-      - DB_PORT=${DB_PORT:-5432}
-      - DB_NAME=${DB_NAME:-smartguard}
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=smartguard
+      - DB_USER=postgres
+      - DB_PASSWORD=password
       - GOOGLE_APPLICATION_CREDENTIALS=/app/key.json
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
     volumes:
@@ -41,8 +42,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
-    profiles:
-      - database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d smartguard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

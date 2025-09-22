@@ -35,9 +35,24 @@ class SmartGuardIntegration:
         self.available = SMARTGUARD_AVAILABLE
         if self.available:
             try:
-                # Initialize database if needed
-                init_db()
-                print("✅ SmartGuard database initialized")
+                # Show resolved DB host for debugging
+                resolved_host = os.getenv("DB_HOST", "postgres")
+                print(f"ℹ️ SmartGuard DB host: {resolved_host}")
+
+                # Initialize database with simple retry/backoff in case DB is still coming up
+                import time
+                max_attempts = 10
+                for attempt in range(1, max_attempts + 1):
+                    try:
+                        init_db()
+                        print("✅ SmartGuard database initialized")
+                        break
+                    except Exception as db_err:
+                        if attempt == max_attempts:
+                            raise db_err
+                        wait_seconds = min(2 * attempt, 10)
+                        print(f"⏳ DB not ready (attempt {attempt}/{max_attempts}): {db_err}. Retrying in {wait_seconds}s...")
+                        time.sleep(wait_seconds)
             except Exception as e:
                 print(f"⚠️ SmartGuard database initialization failed: {e}")
                 self.available = False

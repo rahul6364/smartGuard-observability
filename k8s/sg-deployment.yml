@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartguard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smartguard
+  template:
+    metadata:
+      labels:
+        app: smartguard
+    spec:
+      containers:
+        - name: smartguard
+          image: rahul6364/smart-guard:latest
+          ports:
+            - containerPort: 8000
+            - containerPort: 8501
+          envFrom:
+            - configMapRef:
+                name: smartguard-config
+            - secretRef:
+                name: smartguard-secrets
+          volumeMounts:
+            - name: key-json
+              mountPath: /app/key.json
+              subPath: key.json
+      volumes:
+        - name: key-json
+          secret:
+            secretName: smartguard-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smartguard
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8000
+      targetPort: 8000
+    - port: 8501
+      targetPort: 8501
+  selector:
+    app: smartguard
