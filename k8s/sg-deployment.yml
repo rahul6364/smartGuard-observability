@@ -24,6 +24,9 @@ spec:
                 name: smartguard-config
             - secretRef:
                 name: smartguard-secrets
+          env:  # <-- add this
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /app/key.json
           volumeMounts:
             - name: key-json
               mountPath: /app/key.json
