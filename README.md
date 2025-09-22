@@ -151,7 +151,7 @@ data:
 Encode like this:
 ```bash
 base64 key.json | tr -d '\n' > key.json.b64
-```bash
+```
 
 3) Set the Google Cloud project and region and ensure the Google Kubernetes Engine API is enabled.
 
@@ -185,10 +185,16 @@ kubectl get all -n smartguard
 
 7) Get external IP for the frontend
 ```bash
-kubectl get svc smartguard -n smartguard -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-# Open http://<EXTERNAL-IP>:8501
-```
+kubectl get service smartguard -n smartguard | awk '{print $4}'
 
+```
+# Open http://<EXTERNAL-IP>:8501
+
+8) Once you are done with it, delete the GKE cluster.
+```bash
+gcloud container clusters delete online-boutique \
+  --project=${PROJECT_ID} --region=${REGION}
+```
 ---
 
 ## Notes
